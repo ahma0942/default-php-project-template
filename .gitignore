@@ -1,0 +1,5 @@
+.vscode
+docs
+.php_cs.cache
+dist
+docker-compose.override.yml
