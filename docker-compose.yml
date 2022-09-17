@@ -8,8 +8,7 @@ services:
       - ./api:/var/www/api:delegated
       - ./api/vendor:/var/www/api/vendor:delegated
     ports:
-      - "9003"
-      - "8080:8080"
+      - 9003
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -17,6 +16,25 @@ services:
       - redis
       - phpmyadmin
       - mail
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.TODO.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "--entrypoints.web.address=:8080"
+
+  app:
+    build: app
+    volumes:
+      - ./app:/usr/src/app:delegated
+      - ./app/node_modules:/usr/src/app/node_modules:delegated
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`TODO.localhost`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "--entrypoints.web.address=:4200"
 
   mysql:
     image: mysql:latest
@@ -34,24 +52,31 @@ services:
     depends_on:
       - mysql
     image: phpmyadmin/phpmyadmin
-    ports:
-      - "80:80"
     environment:
       PMA_HOST: mysql
       PMA_USER: TODO
       PMA_PASSWORD: TODO
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.TODO.localhost`)"
+      - "traefik.http.routers.phpmyadmin.entrypoints=web"
+      - "--entrypoints.web.address=:80"
 
   redis:
     image: redis:alpine
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    ports:
-      - "8081:8081"
     environment:
       - REDIS_HOSTS=TODO:redis:6379
     depends_on:
       - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis_commander.rule=Host(`redis.TODO.localhost`)"
+      - "traefik.http.routers.redis_commander.entrypoints=web"
+      - "traefik.http.routers.redis_commander.service=redis_commander"
+      - "traefik.http.services.redis_commander.loadbalancer.server.port=8081"
 
   mail:
     user: root
@@ -61,4 +86,28 @@ services:
       - ./mailhog:/maildir
     ports:
       - "1025:1025"
-      - "8025:8025"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mail.rule=Host(`mail.TODO.localhost`)"
+      - "traefik.http.routers.mail.entrypoints=web"
+      - "traefik.http.routers.mail.service=mail"
+      - "traefik.http.services.mail.loadbalancer.server.port=8025"
+
+  traefik:
+    image: "traefik:v2.2"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=HostRegexp(`traefik.TODO.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "--entrypoints.api.address=:80"

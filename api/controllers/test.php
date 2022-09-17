@@ -1,6 +1,6 @@
 <?php
 $rest->get('/ping', function() {
-	http(200, 'Pong');
+	http(200, 'pong!');
 });
 
 $rest->get('/xdebug', function() {
