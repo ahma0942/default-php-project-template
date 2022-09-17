@@ -1,6 +1,11 @@
 <?php
 $migrationsDir = __DIR__ . "/migrations/";
 $migrationsFile = __DIR__ . "/.migrations";
+
+if (!file_exists($migrationsDir)) {
+    mkdir($migrationsDir);
+}
+
 $migrations = array_diff(scandir($migrationsDir), array('.', '..'));
 $current = file_exists($migrationsFile) ? @file_get_contents($migrationsFile) : false;
 
