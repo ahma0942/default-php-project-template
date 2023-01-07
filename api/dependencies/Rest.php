@@ -2,24 +2,22 @@
 class Rest
 {
     private $request;
+    private $baseEntry = '';
 
-    public function __construct($root = __DIR__.'/')
+    public function __construct()
     {
-        if ($root!=__DIR__.'/') {
-            $root=__DIR__.($root=='' || $root[0]!='/'?'/':'').$root;
-        }
-        $this->root=$root;
-        $this->request=new Request();
+        $this->request = new Request();
     }
 
-    public function custom()
+    public function setBaseEntry($entry)
     {
+        $this->baseEntry = $entry;
     }
 
     private function _validate_path($entry)
     {
         $paths = explode('/', $this->request->getPath());
-        $ps = explode('/', $entry);
+        $ps = explode('/', $this->baseEntry . $entry);
         if (count($paths) != count($ps)) {
             return false;
         }
@@ -33,103 +31,131 @@ class Rest
 
     private function HandleRequest($callable, $middlewares, $entry)
     {
-        $data=[];
+        $data = [];
         foreach ($middlewares as $middleware) {
-            if (strpos($middleware, '.')!==false) {
-                list($class, $middleware)=explode('.', $middleware);
+            if (strpos($middleware, '.') !== false) {
+                list($class, $middleware) = explode('.', $middleware);
             }
             if (preg_match('/\((.*?)\)/', $middleware, $match) == 1) {
-                $params=$match[1]===''?[]:explode(',', $match[1]);
-                foreach($params as &$p) {
+                $params = $match[1] === '' ? [] : explode(',', $match[1]);
+                foreach ($params as &$p) {
                     $p = trim($p);
                 }
-                $middleware=explode('(', $middleware)[0];
+                $middleware = explode('(', $middleware)[0];
             } else {
-                $params=[];
+                $params = [];
             }
-            if ($class!==null) {
-                $mdat=$class::{$middleware}($this->request, $params);
+            if ($class !== null) {
+                $mdat = $class::{$middleware}($this->request, $params);
             } else {
-                $mdat=$middleware($this->request, $params);
+                $mdat = $middleware($this->request, $params);
             }
 
             if (!is_array($mdat)) {
-                $mdat = [];
+                continue;
             }
             foreach ($mdat as $name => $val) {
-                $data[$name]=$val;
+                $data[$name] = $val;
             }
         }
 
         $pathdata = [];
         if (strpos($entry, ':') !== false) {
             $paths = explode('/', $this->request->getPath());
-            $ps = explode('/', $entry);
+            $ps = explode('/', $this->baseEntry . $entry);
             $pathdata = [];
-            for ($i=0; $i<count($ps); $i++) {
+            for ($i = 0; $i < count($ps); $i++) {
                 if (!empty($ps[$i]) && $ps[$i][0] == ':') {
                     $pathdata[substr($ps[$i], 1)] = $paths[$i];
                 }
             }
         }
 
-        if (!is_callable($callable)) {
-            if (strpos($callable, '.')!==false) {
-                $callable=explode('.', $callable);
-                $callable[0]::{$callable[1]}($this->request, $data, $pathdata);
-                exit;
+        if (!is_callable($callable) && strpos($callable, '.') !== false) {
+            $callable = explode('.', $callable);
+            $callable[0]::{$callable[1]}(new RestData($this->request, $data, $pathdata));
+        } else {
+            $callable(new RestData($this->request, $data, $pathdata));
+        }
+    }
+
+    private function checkData($arr)
+    {
+        foreach ($this->request->getBody() as $k => $v) {
+            if (!in_array($k, $arr)) {
+                return false;
             }
         }
-        $callable($this->request, $data, $pathdata);
-        exit;
+
+        foreach ($arr as $k) {
+            if (!isset($this->request->getBody()[$k])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    public function get($entry, $callable, $middlewares=[])
+    public function get($entry, $callable, $middlewares = [])
     {
-        if ($this->request->getMethod()!='GET' || !$this->_validate_path($entry)) {
+        if ($this->request->getMethod() != 'GET' || !$this->_validate_path($entry)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
     }
 
-    public function post($entry, $callable, $middlewares=[])
+    public function post($entry, $allowed_data, $callable, $middlewares = [])
     {
-        if ($this->request->getMethod()!='POST' || !$this->_validate_path($entry)) {
+        if ($this->request->getMethod() != 'POST' || !$this->_validate_path($entry) || !$this->checkData($allowed_data)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
     }
 
-    public function put($entry, $callable, $middlewares=[])
+    public function put($entry, $allowed_data, $callable, $middlewares = [])
     {
-        if ($this->request->getMethod()!='PUT' || !$this->_validate_path($entry)) {
+        if ($this->request->getMethod() != 'PUT' || !$this->_validate_path($entry) || !$this->checkData($allowed_data)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
     }
 
-    public function delete($entry, $callable, $middlewares=[])
+    public function delete($entry, $allowed_data, $callable, $middlewares = [])
     {
-        if ($this->request->getMethod()!='DELETE' || !$this->_validate_path($entry)) {
+        if ($this->request->getMethod() != 'DELETE' || !$this->_validate_path($entry) || !$this->checkData($allowed_data)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
     }
 
-    public function patch($entry, $callable, $middlewares=[])
+    public function patch($entry, $allowed_data, $callable, $middlewares = [])
     {
-        if ($this->request->getMethod()!='PATCH' || !$this->_validate_path($entry)) {
+        if ($this->request->getMethod() != 'PATCH' || !$this->_validate_path($entry) || !$this->checkData($allowed_data)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
     }
 
-    public function resource($entry, $callable, $middlewares=[])
+    public function resource($entry, $allowed_data, $callable, $middlewares = [])
     {
-        if (!$this->_validate_path($entry)) {
+        if (!$this->_validate_path($entry) || !$this->checkData($allowed_data)) {
             return;
         }
         $this->HandleRequest($callable, $middlewares, $entry);
+    }
+}
+
+class RestData
+{
+    public Request $request;
+    public array $middleware;
+    public array $pathdata;
+
+    public function __construct($request, $middleware, $pathdata)
+    {
+        $this->request = $request;
+        $this->middleware = $middleware;
+        $this->pathdata = $pathdata;
     }
 }
 
@@ -139,12 +165,12 @@ class Request
     private $path;
     private $query;
     private $headers;
-    private $body;
+    private array $body;
 
     public function __construct(String $method = null, String $path = null, String $query = null, array $headers = null, String $body = null)
     {
         if (isset($method)) {
-            $this->method=$method;
+            $this->method = $method;
         } else {
             $this->setMethod();
         }
@@ -153,13 +179,13 @@ class Request
             $this->setPathAndQuery();
         } else {
             if (isset($path)) {
-                $this->path=$path;
+                $this->path = $path;
             } else {
                 $this->setPath();
             }
 
             if (isset($query)) {
-                $this->query=$query;
+                $this->query = $query;
             } else {
                 $this->setQuery();
             }
@@ -167,13 +193,13 @@ class Request
 
 
         if (isset($headers)) {
-            $this->headers=$headers;
+            $this->headers = $headers;
         } else {
             $this->setHeaders();
         }
 
         if (isset($body)) {
-            $this->body=$body;
+            $this->body = $body;
         } else {
             $this->setBody();
         }
@@ -199,19 +225,19 @@ class Request
         return $this->headers;
     }
 
-    public function getBody()
+    public function getBody(): array
     {
         return $this->body;
     }
 
     private function setMethod()
     {
-        $this->method=strtoupper($_SERVER['REQUEST_METHOD']);
+        $this->method = strtoupper($_SERVER['REQUEST_METHOD']);
     }
 
     private function setPath()
     {
-        $this->path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
+        $this->path = isset($_SERVER['REQUEST_URI']) ? explode('?', $_SERVER['REQUEST_URI'])[0] : '';
     }
 
     private function setPathAndQuery()
@@ -226,7 +252,7 @@ class Request
             $path = explode('&', explode('?', $_SERVER['REQUEST_URI'])[1]);
             $query = [];
             foreach ($path as $p) {
-                $split=explode('=', $p);
+                $split = explode('=', $p);
                 if (isset($query[$split[0]])) {
                     if (is_array($query[$split[0]])) {
                         $query[$split[0]][] = ($split[1] ? $split[1] : '');
@@ -245,28 +271,28 @@ class Request
 
     private function setHeaders()
     {
-        $this->headers=getallheaders();
+        $this->headers = getallheaders();
     }
 
     private function setBody()
     {
-        $this->body=[];
-        $body=file_get_contents('php://input');
-        if ($body=="") {
+        $this->body = [];
+        $body = file_get_contents('php://input');
+        if ($body == "") {
             return;
         }
-        if ($body[0]=="{" || $body[0]=="[") {
-            $this->body=json_decode($body, true);
+        if ($body[0] == "{" || $body[0] == "[") {
+            $this->body = json_decode($body, true);
         } else {
-            $body=explode('&', $body);
+            $body = explode('&', $body);
             foreach ($body as $b) {
-                $split=explode('=', $b);
+                $split = explode('=', $b);
                 if (!isset($this->body[$split[0]])) {
-                    $this->body[$split[0]]=($split[1]?$split[1]:"");
+                    $this->body[$split[0]] = ($split[1] ? $split[1] : "");
                 } elseif (is_string($this->body[$split[0]])) {
-                    $this->body[$split[0]]=[$this->body[$split[0]],($split[1]?$split[1]:"")];
+                    $this->body[$split[0]] = [$this->body[$split[0]], ($split[1] ? $split[1] : "")];
                 } elseif (is_array($this->body[$split[0]])) {
-                    $this->body[$split[0]][]=($split[1]?$split[1]:"");
+                    $this->body[$split[0]][] = ($split[1] ? $split[1] : "");
                 }
             }
         }

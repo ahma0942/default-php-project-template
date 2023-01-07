@@ -3,7 +3,6 @@ use Twilio\Rest\Client;
 
 class DI
 {
-    private static Database $database;
     private static Log $logger;
     private static Rest $rest;
     private static Mail $mail;
@@ -12,19 +11,6 @@ class DI
     private static Queue $queue;
     private static GuzzleHttp\Client $http;
     private static Discord $discord;
-
-    public static function database() {
-        if (!isset(SELF::$database)) {
-            SELF::$database = new Database(mysqli_connect(
-                SELF::env('DBHOST'),
-                SELF::env('DBUSER'),
-                SELF::env('DBPASS'),
-                SELF::env('DBNAME')
-            ));
-        }
-
-        return SELF::$database;
-    }
 
     public static function logger() {
         if (!isset(SELF::$logger)) {

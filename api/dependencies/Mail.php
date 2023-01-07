@@ -22,7 +22,7 @@ class Mail
         $this->mail->addReplyTo($MAILER['MAIL'], DI::env('APP'));
     }
 
-    public function send($subject, $body, $to)
+    public function send($to, $subject, $body)
     {
         try {
             $this->mail->addAddress($to);

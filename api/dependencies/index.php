@@ -2,10 +2,13 @@
 include 'Mail.php';
 include 'Rest.php';
 include 'Logger.php';
-include 'Database.php';
 include 'Cache.php';
 include 'Discord.php';
 include 'DI.php';
+include "Redbean.php";
+
+R::setup('mysql:host=' . DI::env('DBHOST') . ';dbname=' . DI::env('DBNAME'), DI::env('DBUSER'), DI::env('DBPASS'));
+R::useFeatureSet('novice/latest');
 
 set_error_handler("error_handler");
 register_shutdown_function(function() {
