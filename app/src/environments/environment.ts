@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  "api_url": "http://api.TODO.localhost"
+  "api_url": "api.todo.localhost"
 };
 
 /*

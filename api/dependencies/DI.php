@@ -4,6 +4,7 @@ use Twilio\Rest\Client;
 class DI
 {
     private static Log $logger;
+    private static MongoDB\Client $mongodb;
     private static Rest $rest;
     private static Mail $mail;
     private static Predis\Client $redis;
@@ -18,6 +19,14 @@ class DI
         }
 
         return SELF::$logger;
+    }
+
+    public static function mongodb() {
+        if (!isset(SELF::$mongodb)) {
+            SELF::$mongodb = new MongoDB\Client(SELF::env('MONGODB'));
+        }
+
+        return SELF::$mongodb;
     }
 
     public static function discord() {

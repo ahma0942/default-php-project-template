@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 include "vendor/autoload.php";
 include "funcs/funcs.util.php";
 cors();
-include "envs/.env.local.php";
+include "envs/.env.php";
 include "envs/.env.global.php";
 include "dependencies/index.php";
 include "funcs/funcs.sql.php";

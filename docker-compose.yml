@@ -16,30 +16,63 @@ services:
       - redis
       - phpmyadmin
       - mail
-      - traefik
+      - swagger
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.TODO.localhost`)"
       - "traefik.http.routers.api.entrypoints=web"
       - "--entrypoints.web.address=:8080"
 
+  swagger:
+    build: swagger
+    ports:
+      - 9003
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./swagger:/var/www/swagger:delegated
+      - ./api/controllers:/var/www/controllers:delegated
+      - ./api/envs:/var/www/envs:delegated
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swagger.rule=Host(`swagger.TODO.localhost`)"
+      - "traefik.http.routers.swagger.entrypoints=web"
+      - "--entrypoints.web.address=:8081"
+
   app:
     build: app
     volumes:
       - ./app:/usr/src/app:delegated
       - ./app/node_modules:/usr/src/app/node_modules:delegated
-    depends_on:
-      - traefik
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`TODO.localhost`)"
       - "traefik.http.routers.app.entrypoints=web"
       - "--entrypoints.web.address=:4200"
 
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: TODO
+      MONGO_INITDB_ROOT_PASSWORD: TODO
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: TODO
+      ME_CONFIG_MONGODB_ADMINPASSWORD: TODO
+      ME_CONFIG_MONGODB_URL: mongodb://TODO:TODO@mongo:27017/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo_express.rule=Host(`mongo.TODO.localhost`)"
+      - "traefik.http.routers.mongo_express.entrypoints=web"
+      - "traefik.http.routers.mongo_express.service=mongo_express"
+      - "traefik.http.services.mongo_express.loadbalancer.server.port=8081"
+
   mysql:
     image: mysql:latest
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: TODO
       MYSQL_DATABASE: TODO
@@ -81,11 +114,11 @@ services:
   mail:
     user: root
     image: mailhog/mailhog
+    ports:
+      - "1025:1025"
     command: ["-storage=maildir", "-maildir-path=/maildir"]
     volumes:
       - ./mailhog:/maildir
-    ports:
-      - "1025:1025"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.TODO.localhost`)"

@@ -1,0 +1,39 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "TODO LOCAL"
+    },
+    "host": "api.todo.localhost",
+    "schemes": [
+        "http"
+    ],
+    "securityDefinitions": {
+        "Auth": {
+            "type": "apiKey",
+            "name": "access_token",
+            "in": "header"
+        }
+    },
+    "paths": {
+        "/ping": {
+            "get": {
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/test": {
+            "get": {
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    }
+}
