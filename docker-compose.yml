@@ -53,6 +53,8 @@ services:
   mongo:
     image: mongo
     restart: always
+    volumes:
+      - ./data/mongodb:/data/db:rw
     environment:
       MONGO_INITDB_ROOT_USERNAME: TODO
       MONGO_INITDB_ROOT_PASSWORD: TODO
@@ -79,7 +81,7 @@ services:
       MYSQL_USER: TODO
       MYSQL_PASSWORD: TODO
     volumes:
-      - ./data:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
 
   phpmyadmin:
     depends_on:
@@ -118,7 +120,7 @@ services:
       - "1025:1025"
     command: ["-storage=maildir", "-maildir-path=/maildir"]
     volumes:
-      - ./mailhog:/maildir
+      - ./data/mailhog:/maildir
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.TODO.localhost`)"
