@@ -1,4 +1,4 @@
-FROM php:8.1.14-cli-alpine
+FROM php:8.2.4-cli-alpine
 
 RUN apk update && apk add git openssh zip unzip curl-dev pkgconfig linux-headers
 

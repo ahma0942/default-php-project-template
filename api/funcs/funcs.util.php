@@ -32,14 +32,10 @@ function randstr($length = 30, $characters = '0123456789abcdefghijklmnopqrstuvwx
     return $randomString;
 }
 
-function http($code = 204, $data = '', $json = false)
+function http($code = 204, $data = '', $reasonPhrase = '')
 {
-    http_response_code($code);
-    if ($json) {
-        echo json_encode($data);
-    } else {
-        echo $data;
-    }
+	header("HTTP/1.1 $code $reasonPhrase");
+    echo $data;
     exit;
 }
 

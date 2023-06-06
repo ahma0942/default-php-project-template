@@ -81,14 +81,16 @@ class Rest
 
     private function checkData($arr)
     {
-        foreach ($this->request->getBody() as $k => $v) {
+        $body = $this->request->getBody();
+
+        foreach ($body as $k => $v) {
             if (!in_array($k, $arr)) {
                 return false;
             }
         }
 
         foreach ($arr as $k) {
-            if (!isset($this->request->getBody()[$k])) {
+            if (!isset($body[$k])) {
                 return false;
             }
         }
